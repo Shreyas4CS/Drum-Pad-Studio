@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CognoSpace Drum Pad</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#2F3C7E; --coral:#F96167; --cream:#FFF8F0;
+  --yellow:#FFD93D; --mint:#5FD9B4; --sky:#7EC8E3; --ink:#1F2347;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito',sans-serif;background:linear-gradient(150deg,#FFF8F0 0%,#FFE9D9 45%,#F0E9FF 100%);min-height:100vh;display:flex;flex-direction:column;align-items:center;color:var(--ink);}
+
+/* ===== NAVBAR ===== */
+nav{
+  width:100%;background:var(--navy);border-bottom:4px solid var(--ink);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 28px;position:sticky;top:0;z-index:999;
+  box-shadow:0 4px 20px rgba(31,35,71,.25);
+}
+.nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-brand span{font-family:'Fredoka',sans-serif;font-size:20px;font-weight:700;color:var(--yellow);letter-spacing:.5px;}
+.nav-brand small{font-size:11px;color:rgba(255,248,240,.65);font-weight:600;margin-top:-2px;display:block;}
+.nav-logo-link{display:flex;align-items:center;gap:8px;text-decoration:none;}
+.nav-logo{height:56px;width:auto;object-fit:contain;cursor:pointer;}
+.nav-logo-link:hover{opacity:.85;}
+.nav-logo-text{display:flex;flex-direction:column;line-height:1.1;}
+.nav-logo-text .brand-name{font-family:'Fredoka',sans-serif;font-size:18px;font-weight:700;color:#fff;letter-spacing:.3px;}
+.nav-logo-text .brand-tag{font-size:11px;color:rgba(255,248,240,.65);font-weight:600;}
+
+/* ===== HEADER ===== */
+header{text-align:center;padding:28px 16px 4px;}
+header h1{font-family:'Fredoka',sans-serif;font-size:clamp(26px,5vw,46px);color:var(--navy);letter-spacing:.5px;}
+header h1 span{color:var(--coral);}
+header p{color:#5b5f86;font-weight:600;font-size:14px;margin-top:6px;}
+
+/* ===== TOP BAR ===== */
+.top-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center;padding:20px 16px 0;}
+.btn{font-family:'Fredoka',sans-serif;font-weight:600;font-size:14px;padding:11px 20px;border-radius:14px;border:3px solid var(--ink);box-shadow:5px 5px 0 var(--ink);cursor:pointer;transition:transform .08s,box-shadow .08s;background:var(--mint);color:var(--ink);}
+.btn:hover{transform:translate(-1px,-1px);box-shadow:6px 6px 0 var(--ink);}
+.btn:active{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--ink);}
+.btn.connect{background:var(--sky);}
+.btn.disconnect{background:var(--coral);color:#fff;}
+.btn.admin-login-btn{background:var(--yellow);}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:5px 5px 0 var(--ink);}
+.status-pill{font-weight:800;font-size:12px;padding:9px 16px;border-radius:999px;border:2px solid var(--ink);background:#fff;display:flex;align-items:center;gap:8px;}
+.status-dot{width:10px;height:10px;border-radius:50%;background:#ccc;transition:background .3s,box-shadow .3s;}
+.status-dot.live{background:#3ECF6B;box-shadow:0 0 10px #3ECF6B;}
+
+/* ===== ADMIN BADGE ===== */
+.admin-badge{display:none;align-items:center;gap:6px;background:var(--yellow);border:2px solid var(--ink);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:800;}
+.admin-badge.show{display:flex;}
+
+/* ===== MODES ===== */
+.modes-wrap{padding:20px 16px 0;width:100%;max-width:820px;}
+.modes-label{font-weight:800;font-size:12px;letter-spacing:.8px;text-transform:uppercase;color:#777;margin-bottom:10px;text-align:center;}
+.modes{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+.mode-btn{font-family:'Fredoka',sans-serif;font-weight:600;font-size:13px;padding:9px 16px;border-radius:12px;border:3px solid var(--ink);background:#fff;cursor:pointer;box-shadow:4px 4px 0 var(--ink);transition:all .1s ease;}
+.mode-btn:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink);}
+.mode-btn.active{background:var(--yellow);transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink);}
+
+/* ===== PADS GRID ===== */
+.pads{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;width:100%;max-width:820px;padding:20px 16px;}
+@media(max-width:520px){.pads{grid-template-columns:1fr;}}
+
+.pad{
+  border-radius:22px;border:4px solid var(--ink);
+  box-shadow:8px 8px 0 var(--ink);padding:20px;
+  position:relative;overflow:hidden;
+  transition:transform .1s ease,box-shadow .1s ease;
+  cursor:default;
+}
+.pad::before{
+  content:'';position:absolute;inset:-60%;
+  background:conic-gradient(transparent 0deg,rgba(255,255,255,.15) 60deg,transparent 120deg);
+  animation:shimmer 4s linear infinite;pointer-events:none;
+}
+@keyframes shimmer{to{transform:rotate(360deg);}}
+.pad.hit{transform:translate(4px,4px) scale(.97);box-shadow:3px 3px 0 var(--ink);}
+.pad.hit::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,.35);border-radius:18px;animation:flashOut .25s forwards;}
+@keyframes flashOut{to{opacity:0;}}
+
+.pad-1{background:linear-gradient(135deg,#FFE8A3,#FFD93D);}
+.pad-2{background:linear-gradient(135deg,#B9F3DE,#5FD9B4);}
+.pad-3{background:linear-gradient(135deg,#C2D8FF,#7EC8E3);}
+.pad-4{background:linear-gradient(135deg,#FFB9BB,#F96167);}
+
+.pad-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px;}
+.pad-icon{font-size:28px;line-height:1;flex-shrink:0;margin-top:2px;}
+.pad-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:1;min-width:0;}
+.pad-name{font-family:'Fredoka',sans-serif;font-weight:700;font-size:16px;white-space:nowrap;text-align:right;}
+.pad-dist{font-weight:800;font-size:12px;background:#fff;padding:4px 10px;border-radius:999px;border:2px solid var(--ink);min-width:68px;text-align:center;white-space:nowrap;}
+.pad-bar{height:10px;border-radius:999px;border:2px solid var(--ink);background:rgba(255,255,255,.6);overflow:hidden;margin:6px 0 10px;}
+.pad-bar-fill{height:100%;width:0%;background:var(--navy);border-radius:999px;transition:width .08s linear;}
+.slider-row{margin-top:2px;}
+.slider-label-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;}
+.slider-label-text{font-size:11px;font-weight:800;color:#3a3d5c;white-space:nowrap;flex-shrink:0;}
+.slider-label-val{font-size:12px;font-weight:800;color:var(--navy);background:#fff;padding:2px 9px;border-radius:999px;border:2px solid var(--ink);white-space:nowrap;flex-shrink:0;}
+input[type=range]{-webkit-appearance:none;width:100%;height:9px;border-radius:999px;background:rgba(255,255,255,.7);border:2px solid var(--ink);outline:none;display:block;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--coral);border:3px solid var(--ink);cursor:pointer;}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--coral);border:3px solid var(--ink);cursor:pointer;}
+
+/* Admin test button inside pad */
+.test-btn{
+  display:none;margin-top:12px;width:100%;font-family:'Fredoka',sans-serif;
+  font-weight:700;font-size:13px;padding:9px;border-radius:12px;
+  border:3px solid var(--ink);background:var(--navy);color:#fff;
+  cursor:pointer;box-shadow:4px 4px 0 var(--ink);transition:all .08s;
+}
+.test-btn:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink);}
+.test-btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink);}
+.admin-active .test-btn{display:block;}
+
+/* ===== INFO CARD ===== */
+.info-card{max-width:820px;width:calc(100% - 32px);background:#fff;border:3px solid var(--ink);border-radius:18px;box-shadow:5px 5px 0 var(--ink);padding:14px 18px;margin:0 16px 24px;font-size:13px;color:#444;line-height:1.6;}
+.info-card b{color:var(--navy);}
+
+/* ===== ADMIN MODAL ===== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(31,35,71,.6);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--cream);border:4px solid var(--ink);border-radius:24px;box-shadow:10px 10px 0 var(--ink);padding:32px;max-width:360px;width:90%;animation:popIn .2s ease;}
+@keyframes popIn{from{transform:scale(.85);opacity:0;}to{transform:scale(1);opacity:1;}}
+.modal h2{font-family:'Fredoka',sans-serif;font-size:24px;color:var(--navy);margin-bottom:6px;}
+.modal p{font-size:13px;color:#666;margin-bottom:18px;}
+.modal input{width:100%;padding:12px 14px;border:3px solid var(--ink);border-radius:12px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px;outline:none;background:#fff;}
+.modal input:focus{border-color:var(--coral);}
+.modal-err{color:var(--coral);font-size:12px;font-weight:800;margin-bottom:10px;display:none;}
+.modal-btns{display:flex;gap:10px;}
+.modal-btns button{flex:1;}
+
+/* ===== FOOTER ===== */
+footer{
+  width:100%;margin-top:auto;
+  background:var(--navy);border-top:4px solid var(--ink);
+  padding:28px 16px 24px;
+}
+.footer-inner{max-width:820px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:start;}
+@media(max-width:560px){.footer-inner{grid-template-columns:1fr;text-align:center;}}
+.footer-brand a{text-decoration:none;}
+.footer-brand .name{font-family:'Fredoka',sans-serif;font-size:22px;font-weight:700;color:var(--yellow);}
+.footer-brand .tag{font-size:12px;color:rgba(255,248,240,.6);margin-top:4px;}
+.footer-links h4{font-family:'Fredoka',sans-serif;font-size:14px;color:var(--yellow);margin-bottom:10px;font-weight:700;}
+.footer-links a{display:block;color:rgba(255,248,240,.75);font-size:13px;text-decoration:none;margin-bottom:6px;transition:color .15s;}
+.footer-links a:hover{color:var(--coral);}
+.footer-copy{text-align:center;border-top:2px solid rgba(255,255,255,.1);margin-top:22px;padding-top:16px;font-size:12px;color:rgba(255,248,240,.5);}
+.footer-copy span{color:var(--coral);font-weight:800;}
+</style>
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav>
+  <div class="nav-brand" style="pointer-events:none;">
+    <div>
+      <span>CognoSpace</span>
+      <small>Drum Pad Studio</small>
+    </div>
+  </div>
+  <a class="nav-logo-link" href="https://www.cognospace.in" target="_blank" rel="noopener">
+    <!-- Replace src below with your actual logo path -->
+    <img class="nav-logo" src="cognospace_logo.png" alt="CognoSpace Logo" onerror="this.style.display='none'">
+    <div class="nav-logo-text">
+      <span class="brand-name"></span>
+      <span class="brand-tag"></span>
+    </div>
+  </a>
+</nav>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <h1>Ultrasonic <span>Drum Pad</span></h1>
+  <p>Wave your hand — 4 sensors, 10 sound modes, infinite beats 🥁</p>
+</header>
+
+<!-- ===== TOP BAR ===== -->
+<div class="top-bar">
+  <button id="connectBtn" class="btn connect">🔌 Connect ESP32</button>
+  <button id="disconnectBtn" class="btn disconnect" disabled>⛔ Disconnect</button>
+  <div class="status-pill"><span id="statusDot" class="status-dot"></span><span id="statusText">Not Connected</span></div>
+  <button id="adminLoginBtn" class="btn admin-login-btn">🔐 Admin</button>
+  <div id="adminBadge" class="admin-badge">✅ Admin Mode</div>
+  <button id="adminLogoutBtn" class="btn" style="display:none;background:#f0f0f0;">🔓 Logout</button>
+</div>
+
+<!-- ===== MODES ===== -->
+<div class="modes-wrap">
+  <div class="modes-label">🎵 Sound Mode</div>
+  <div class="modes" id="modes">
+    <button class="mode-btn active" data-mode="drumkit">🥁 Drum Kit</button>
+    <button class="mode-btn" data-mode="soft">🎐 Soft Pads</button>
+    <button class="mode-btn" data-mode="rock">⚡ Hard Rock</button>
+    <button class="mode-btn" data-mode="electronic">🎹 Electronic</button>
+    <button class="mode-btn" data-mode="hiphop">🔊 Hip-Hop 808</button>
+    <button class="mode-btn" data-mode="jazz">🎷 Jazz</button>
+    <button class="mode-btn" data-mode="lofi">☁️ Lo-Fi</button>
+    <button class="mode-btn" data-mode="metal">🤘 Metal</button>
+    <button class="mode-btn" data-mode="ambient">🌊 Ambient</button>
+    <button class="mode-btn" data-mode="retro">👾 Retro Arcade</button>
+  </div>
+</div>
+
+<!-- ===== PADS ===== -->
+<div class="pads" id="pads"></div>
+
+<!-- ===== INFO CARD ===== -->
+<div class="info-card">
+  <b>How to use:</b> Connect your ESP32 via USB → click <b>Connect ESP32</b> → choose COM port. Each pad shows live distance. Drag the slider to set trigger threshold. When hand enters range, the pad fires its sound. Switch modes to change the sound kit. <b>Admin:</b> login with admin / admin123 to test sounds without the sensor.
+</div>
+
+<!-- ===== ADMIN LOGIN MODAL ===== -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>🔐 Admin Login</h2>
+    <p>Enter credentials to unlock Admin Mode</p>
+    <input type="text" id="adminUser" placeholder="Username" autocomplete="off">
+    <input type="password" id="adminPass" placeholder="Password">
+    <div class="modal-err" id="modalErr">❌ Wrong credentials!</div>
+    <div class="modal-btns">
+      <button class="btn" id="modalCancel" style="background:#eee;">Cancel</button>
+      <button class="btn" id="modalLogin" style="background:var(--mint);">Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="https://www.cognospace.in" target="_blank" rel="noopener">
+        <div class="name">CognoSpace</div>
+      </a>
+      <div class="tag">Experiential STEM &amp; Robotics Learning</div>
+    </div>
+    <div class="footer-links">
+      <h4>Quick Links</h4>
+      <a href="https://www.cognospace.in" target="_blank" rel="noopener">🌐 Website</a>
+      <a href="https://www.cognospace.in" target="_blank" rel="noopener">📘 About Us</a>
+      <a href="https://www.cognospace.in" target="_blank" rel="noopener">🤝 Contact</a>
+    </div>
+    <div class="footer-links">
+      <h4>Project</h4>
+      <a href="#">🥁 Drum Pad Studio</a>
+      <a href="https://www.cognospace.in" target="_blank" rel="noopener">🔬 STEM Solutions</a>
+      <a href="https://www.cognospace.in" target="_blank" rel="noopener">🤖 Robotics Kits</a>
+    </div>
+  </div>
+  <div class="footer-copy">
+    Designed &amp; Developed with <span>♥</span> by <span>CognoSpace</span> · For young minds · 2026
+  </div>
+</footer>
+
+<script>
+// =====================================================
+//  AUDIO ENGINE
+// =====================================================
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+function resumeCtx(){ if(ctx.state==='suspended') ctx.resume(); }
+
+function mkGain(peak, attack, release){
+  const g = ctx.createGain();
+  const t = ctx.currentTime;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(peak, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + attack + release);
+  return g;
+}
+
+function tone(freq, type, release, opts={}){
+  try{
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    if(opts.slide) osc.frequency.exponentialRampToValueAtTime(opts.slide, t + release);
+    const g = mkGain(opts.pk||0.8, opts.att||0.003, release);
+    let out = osc;
+    if(opts.lp){const f=ctx.createBiquadFilter();f.type='lowpass';f.frequency.value=opts.lp;osc.connect(f);out=f;}
+    if(opts.hp){const f=ctx.createBiquadFilter();f.type='highpass';f.frequency.value=opts.hp;out.connect(f);out=f;}
+    out.connect(g).connect(ctx.destination);
+    osc.start(t); osc.stop(t+release+0.1);
+  }catch(e){console.warn(e);}
+}
+
+function noise(release, opts={}){
+  try{
+    const t = ctx.currentTime;
+    const len = Math.ceil(ctx.sampleRate * (release + 0.1));
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const f = ctx.createBiquadFilter();
+    f.type = opts.ft||'bandpass'; f.frequency.value = opts.ff||2000; f.Q.value = opts.q||1;
+    const g = mkGain(opts.pk||0.7, opts.att||0.001, release);
+    src.connect(f).connect(g).connect(ctx.destination);
+    src.start(t); src.stop(t+release+0.1);
+  }catch(e){console.warn(e);}
+}
+
+// =====================================================
+//  10 SOUND MODES — each: [pad0, pad1, pad2, pad3]
+// =====================================================
+const MODES = {
+  drumkit:[
+    ()=>{tone(55,'sine',.35,{slide:28,pk:1,att:.001});noise(.06,{ft:'lowpass',ff:120,pk:.3,att:.001});},
+    ()=>{noise(.18,{ft:'bandpass',ff:1800,pk:.9,q:1.5});tone(200,'triangle',.1,{pk:.3});},
+    ()=>{noise(.05,{ft:'highpass',ff:7000,pk:.45});},
+    ()=>{tone(145,'sine',.28,{slide:80,pk:.85,att:.002});},
+  ],
+  soft:[
+    ()=>{tone(220,'sine',.7,{pk:.4,att:.06,lp:900});},
+    ()=>{tone(330,'sine',.6,{pk:.35,att:.07,lp:1000});},
+    ()=>{tone(440,'sine',.55,{pk:.3,att:.06,lp:1200});},
+    ()=>{tone(165,'sine',.75,{pk:.4,att:.08,lp:800});},
+  ],
+  rock:[
+    ()=>{tone(80,'square',.3,{slide:40,pk:.9});noise(.12,{ft:'lowpass',ff:300,pk:.5});},
+    ()=>{noise(.22,{ft:'bandpass',ff:2500,pk:1,q:2});tone(180,'sawtooth',.08,{pk:.25});},
+    ()=>{noise(.04,{ft:'highpass',ff:9000,pk:.6});},
+    ()=>{tone(100,'sawtooth',.3,{slide:55,pk:.85});},
+  ],
+  electronic:[
+    ()=>{tone(110,'square',.22,{pk:.7,lp:600});},
+    ()=>{tone(220,'sawtooth',.18,{pk:.6});},
+    ()=>{tone(880,'square',.08,{pk:.5,hp:600});},
+    ()=>{tone(55,'sine',.4,{slide:40,pk:.9});},
+  ],
+  hiphop:[
+    ()=>{tone(48,'sine',.55,{slide:28,pk:1,att:.001});},
+    ()=>{noise(.2,{ft:'bandpass',ff:1400,pk:.85,q:1.2});tone(180,'triangle',.05,{pk:.2});},
+    ()=>{noise(.04,{ft:'highpass',ff:8500,pk:.4});},
+    ()=>{tone(65,'sine',.45,{slide:35,pk:.8});},
+  ],
+  jazz:[
+    ()=>{tone(110,'sine',.4,{pk:.5,lp:800,att:.02});},
+    ()=>{noise(.15,{ft:'bandpass',ff:1200,pk:.55,q:0.8});},
+    ()=>{noise(.08,{ft:'highpass',ff:5000,pk:.3,att:.005});},
+    ()=>{tone(82,'sine',.35,{pk:.6,lp:1000,att:.02});},
+  ],
+  lofi:[
+    ()=>{tone(55,'sine',.5,{pk:.6,lp:500,att:.04});noise(.05,{ft:'lowpass',ff:200,pk:.1});},
+    ()=>{noise(.2,{ft:'bandpass',ff:900,pk:.5,q:.6});},
+    ()=>{noise(.06,{ft:'highpass',ff:4000,pk:.25});},
+    ()=>{tone(44,'sine',.6,{pk:.55,lp:400,att:.05});},
+  ],
+  metal:[
+    ()=>{tone(60,'sawtooth',.25,{slide:30,pk:1});noise(.08,{ft:'lowpass',ff:250,pk:.5});},
+    ()=>{noise(.3,{ft:'bandpass',ff:3000,pk:1,q:3});tone(160,'square',.06,{pk:.3});},
+    ()=>{noise(.04,{ft:'highpass',ff:10000,pk:.7});},
+    ()=>{tone(82,'square',.25,{slide:50,pk:.9});},
+  ],
+  ambient:[
+    ()=>{tone(174,'sine',1.2,{pk:.35,att:.15,lp:1200});},
+    ()=>{tone(261,'sine',1.0,{pk:.3,att:.18,lp:1400});},
+    ()=>{tone(349,'sine',.9,{pk:.28,att:.15,lp:1600});},
+    ()=>{tone(130,'sine',1.3,{pk:.4,att:.2,lp:1000});},
+  ],
+  retro:[
+    ()=>{tone(130,'square',.18,{pk:.7,hp:200});},
+    ()=>{tone(262,'square',.12,{pk:.6});},
+    ()=>{tone(523,'square',.08,{pk:.55});},
+    ()=>{noise(.06,{ft:'bandpass',ff:800,pk:.5,q:4});},
+  ],
+};
+
+let currentMode='drumkit';
+
+// =====================================================
+//  PAD SETUP
+// =====================================================
+const PAD_DEFS=[
+  {name:'Pad 1 — Kick',icon:'🥁',cls:'pad-1'},
+  {name:'Pad 2 — Snare',icon:'🎯',cls:'pad-2'},
+  {name:'Pad 3 — Hi-Hat',icon:'✨',cls:'pad-3'},
+  {name:'Pad 4 — Tom',icon:'🔔',cls:'pad-4'},
+];
+const padState=[
+  {dist:300,thresh:20,active:false},
+  {dist:300,thresh:20,active:false},
+  {dist:300,thresh:20,active:false},
+  {dist:300,thresh:20,active:false},
+];
+
+const padsEl=document.getElementById('pads');
+PAD_DEFS.forEach((p,i)=>{
+  const d=document.createElement('div');
+  d.className=`pad ${p.cls}`;
+  d.id=`pad-${i}`;
+  d.innerHTML=`
+    <div class="pad-top">
+      <div class="pad-icon">${p.icon}</div>
+      <div class="pad-right">
+        <div class="pad-name">${p.name}</div>
+        <div class="pad-dist" id="dist-${i}">-- cm</div>
+      </div>
+    </div>
+    <div class="pad-bar"><div class="pad-bar-fill" id="bar-${i}"></div></div>
+    <div class="slider-row">
+      <div class="slider-label-row">
+        <span class="slider-label-text">Trigger Distance</span>
+        <span class="slider-label-val"><span id="tl-${i}">20</span> cm</span>
+      </div>
+      <input type="range" min="2" max="100" value="20" id="thr-${i}">
+    </div>
+    <button class="test-btn" id="test-${i}">🎵 Test Pad ${i+1}</button>
+  `;
+  padsEl.appendChild(d);
+  document.getElementById(`thr-${i}`).addEventListener('input',e=>{
+    padState[i].thresh=parseFloat(e.target.value);
+    document.getElementById(`tl-${i}`).textContent=e.target.value;
+  });
+  document.getElementById(`test-${i}`).addEventListener('click',()=>{
+    resumeCtx(); fireSound(i);
+    const pe=document.getElementById(`pad-${i}`);
+    pe.classList.add('hit'); setTimeout(()=>pe.classList.remove('hit'),250);
+  });
+});
+
+function fireSound(i){
+  try{ MODES[currentMode][i](); }catch(e){ console.error('Sound error:',e); }
+}
+
+// =====================================================
+//  MODE BUTTONS
+// =====================================================
+document.querySelectorAll('.mode-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.mode-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    currentMode=b.dataset.mode;
+  });
+});
+
+// =====================================================
+//  PAD HIT LOGIC
+// =====================================================
+function trigPad(i){
+  resumeCtx();
+  document.getElementById(`pad-${i}`).classList.add('hit');
+  fireSound(i);
+}
+function relPad(i){
+  document.getElementById(`pad-${i}`).classList.remove('hit');
+}
+
+// =====================================================
+//  WEB SERIAL
+// =====================================================
+let port,reader,looping=false,lineBuf='';
+const connBtn=document.getElementById('connectBtn');
+const discBtn=document.getElementById('disconnectBtn');
+const sDot=document.getElementById('statusDot');
+const sTxt=document.getElementById('statusText');
+
+connBtn.addEventListener('click',async()=>{
+  if(!('serial' in navigator)){alert('Use Chrome or Edge on desktop for Web Serial API.');return;}
+  resumeCtx();
+  try{
+    port=await navigator.serial.requestPort();
+    await port.open({baudRate:115200});
+    sDot.classList.add('live'); sTxt.textContent='Connected';
+    connBtn.disabled=true; discBtn.disabled=false;
+    looping=true; readLoop();
+  }catch(e){sTxt.textContent='Failed: '+e.message;}
+});
+discBtn.addEventListener('click',async()=>{
+  looping=false;
+  try{if(reader)await reader.cancel();if(port)await port.close();}catch(e){}
+  sDot.classList.remove('live'); sTxt.textContent='Not Connected';
+  connBtn.disabled=false; discBtn.disabled=true;
+  padState.forEach((_,i)=>{padState[i].active=false;relPad(i);});
+});
+
+async function readLoop(){
+  const dec=new TextDecoderStream();
+  port.readable.pipeTo(dec.writable);
+  reader=dec.readable.getReader();
+  try{
+    while(looping){
+      const{value,done}=await reader.read();
+      if(done)break;
+      if(value){
+        lineBuf+=value;
+        const lines=lineBuf.split('\n');
+        lineBuf=lines.pop();
+        lines.forEach(l=>parseLine(l.trim()));
+      }
+    }
+  }catch(e){console.error(e);}finally{reader.releaseLock();}
+}
+
+function parseLine(line){
+  if(!line||!line.includes(','))return;
+  const p=line.split(',').map(parseFloat);
+  if(p.length!==4||p.some(isNaN))return;
+  p.forEach((dist,i)=>{
+    padState[i].dist=dist;
+    document.getElementById(`dist-${i}`).textContent=dist.toFixed(1)+' cm';
+    const pct=Math.max(0,Math.min(100,100-(dist/100)*100));
+    document.getElementById(`bar-${i}`).style.width=pct+'%';
+    const close=dist<=padState[i].thresh;
+    if(close&&!padState[i].active){padState[i].active=true;trigPad(i);}
+    else if(!close&&padState[i].active){padState[i].active=false;relPad(i);}
+  });
+}
+
+// =====================================================
+//  ADMIN MODE
+// =====================================================
+let adminActive=false;
+const overlay=document.getElementById('modalOverlay');
+const adminLoginBtn=document.getElementById('adminLoginBtn');
+const adminBadge=document.getElementById('adminBadge');
+const adminLogoutBtn=document.getElementById('adminLogoutBtn');
+const modalErr=document.getElementById('modalErr');
+
+adminLoginBtn.addEventListener('click',()=>{
+  document.getElementById('adminUser').value='';
+  document.getElementById('adminPass').value='';
+  modalErr.style.display='none';
+  overlay.classList.add('open');
+});
+document.getElementById('modalCancel').addEventListener('click',()=>overlay.classList.remove('open'));
+overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.classList.remove('open');});
+document.getElementById('modalLogin').addEventListener('click',doLogin);
+document.getElementById('adminPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+function doLogin(){
+  const u=document.getElementById('adminUser').value.trim();
+  const p=document.getElementById('adminPass').value.trim();
+  if(u==='admin'&&p==='admin123'){
+    adminActive=true;
+    overlay.classList.remove('open');
+    adminBadge.classList.add('show');
+    adminLoginBtn.style.display='none';
+    adminLogoutBtn.style.display='';
+    document.getElementById('pads').classList.add('admin-active');
+  } else {
+    modalErr.style.display='block';
+    document.getElementById('adminUser').style.borderColor='var(--coral)';
+    document.getElementById('adminPass').style.borderColor='var(--coral)';
+  }
+}
+adminLogoutBtn.addEventListener('click',()=>{
+  adminActive=false;
+  adminBadge.classList.remove('show');
+  adminLoginBtn.style.display='';
+  adminLogoutBtn.style.display='none';
+  document.getElementById('pads').classList.remove('admin-active');
+});
+</script>
+</body>
+</html>
