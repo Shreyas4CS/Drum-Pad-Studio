@@ -174,18 +174,9 @@ footer{
   <p>Wave your hand — 4 sensors, 10 sound modes, infinite beats 🥁</p>
 </header>
 
-<!-- ===== CONNECTION TYPE ===== -->
-<div class="modes-wrap" style="max-width:820px;">
-  <div class="modes-label">🔗 Connection Type</div>
-  <div class="modes">
-    <button class="mode-btn active" id="connModeSerial">🔌 USB Serial</button>
-    <button class="mode-btn" id="connModeBLE">📶 Bluetooth</button>
-  </div>
-</div>
-
 <!-- ===== TOP BAR ===== -->
 <div class="top-bar">
-  <button id="connectBtn" class="btn connect">🔌 Connect ESP32 (USB)</button>
+  <button id="connectBtn" class="btn connect">🔌 Connect ESP32</button>
   <button id="disconnectBtn" class="btn disconnect" disabled>⛔ Disconnect</button>
   <div class="status-pill"><span id="statusDot" class="status-dot"></span><span id="statusText">Not Connected</span></div>
   <button id="adminLoginBtn" class="btn admin-login-btn">🔐 Admin</button>
@@ -215,7 +206,7 @@ footer{
 
 <!-- ===== INFO CARD ===== -->
 <div class="info-card">
-  <b>How to use:</b> Pick a <b>Connection Type</b> above — <b>USB Serial</b> (plug ESP32 into this device via cable, then click Connect and choose the COM port) or <b>Bluetooth</b> (ESP32 broadcasts wirelessly as "CognoSpace-DrumPad" — click Connect and pick it from the list; great for playing sound through your tablet's speaker). Each pad shows live distance. Drag the slider to set trigger threshold. When hand enters range, the pad fires its sound. Switch modes to change the sound kit. <b>Admin:</b> login with admin / admin123 to test sounds without the sensor.
+  <b>How to use:</b> Connect your ESP32 via USB → click <b>Connect ESP32</b> → choose COM port. Each pad shows live distance. Drag the slider to set trigger threshold. When hand enters range, the pad fires its sound. Switch modes to change the sound kit. <b>Admin:</b> login with admin / admin123 to test sounds without the sensor.
 </div>
 
 <!-- ===== ADMIN LOGIN MODAL ===== -->
@@ -456,72 +447,32 @@ function relPad(i){
 }
 
 // =====================================================
-//  CONNECTION TYPE TOGGLE (Serial vs Bluetooth)
+//  WEB SERIAL
 // =====================================================
-let connMode='serial'; // 'serial' | 'bluetooth'
-const connModeSerialBtn=document.getElementById('connModeSerial');
-const connModeBLEBtn=document.getElementById('connModeBLE');
+let port,reader,looping=false,lineBuf='';
 const connBtn=document.getElementById('connectBtn');
 const discBtn=document.getElementById('disconnectBtn');
 const sDot=document.getElementById('statusDot');
 const sTxt=document.getElementById('statusText');
 
-function setConnMode(mode){
-  if(connBtn.disabled) return; // ignore mode switch while connected
-  connMode=mode;
-  connModeSerialBtn.classList.toggle('active',mode==='serial');
-  connModeBLEBtn.classList.toggle('active',mode==='bluetooth');
-  connBtn.textContent = mode==='serial' ? '🔌 Connect ESP32 (USB)' : '📶 Connect ESP32 (Bluetooth)';
-}
-connModeSerialBtn.addEventListener('click',()=>setConnMode('serial'));
-connModeBLEBtn.addEventListener('click',()=>setConnMode('bluetooth'));
-
-function setToggleDisabled(disabled){
-  connModeSerialBtn.disabled=disabled;
-  connModeBLEBtn.disabled=disabled;
-}
-
 connBtn.addEventListener('click',async()=>{
+  if(!('serial' in navigator)){alert('Use Chrome or Edge on desktop for Web Serial API.');return;}
   resumeCtx();
-  if(connMode==='serial') await connectSerial();
-  else await connectBLE();
-});
-discBtn.addEventListener('click',async()=>{
-  if(connMode==='serial') await disconnectSerial();
-  else await disconnectBLE();
-  onDisconnected();
-});
-
-function onDisconnected(){
-  sDot.classList.remove('live'); sTxt.textContent='Not Connected';
-  connBtn.disabled=false; discBtn.disabled=true;
-  setToggleDisabled(false);
-  padState.forEach((_,i)=>{padState[i].active=false;relPad(i);});
-}
-function onConnected(label){
-  sDot.classList.add('live'); sTxt.textContent=label;
-  connBtn.disabled=true; discBtn.disabled=false;
-  setToggleDisabled(true);
-}
-
-// =====================================================
-//  WEB SERIAL (USB mode)
-// =====================================================
-let port,reader,looping=false,lineBuf='';
-
-async function connectSerial(){
-  if(!('serial' in navigator)){alert('Use Chrome or Edge on desktop/Android for Web Serial API.');return;}
   try{
     port=await navigator.serial.requestPort();
     await port.open({baudRate:115200});
-    onConnected('Connected (USB)');
+    sDot.classList.add('live'); sTxt.textContent='Connected';
+    connBtn.disabled=true; discBtn.disabled=false;
     looping=true; readLoop();
   }catch(e){sTxt.textContent='Failed: '+e.message;}
-}
-async function disconnectSerial(){
+});
+discBtn.addEventListener('click',async()=>{
   looping=false;
   try{if(reader)await reader.cancel();if(port)await port.close();}catch(e){}
-}
+  sDot.classList.remove('live'); sTxt.textContent='Not Connected';
+  connBtn.disabled=false; discBtn.disabled=true;
+  padState.forEach((_,i)=>{padState[i].active=false;relPad(i);});
+});
 
 async function readLoop(){
   const dec=new TextDecoderStream();
@@ -539,42 +490,6 @@ async function readLoop(){
       }
     }
   }catch(e){console.error(e);}finally{reader.releaseLock();}
-}
-
-// =====================================================
-//  WEB BLUETOOTH (Bluetooth mode)
-// =====================================================
-const BLE_SERVICE_UUID='6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-const BLE_CHAR_TX_UUID='6e400003-b5a3-f393-e0a9-e50e24dcca9e';
-let bleDevice,bleServer,bleChar,bleLineBuf='';
-
-async function connectBLE(){
-  if(!('bluetooth' in navigator)){alert('Use Chrome or Edge (Bluetooth enabled) on desktop or Android for Web Bluetooth. iOS Safari does not support it.');return;}
-  try{
-    bleDevice=await navigator.bluetooth.requestDevice({
-      filters:[{services:[BLE_SERVICE_UUID]}],
-      optionalServices:[BLE_SERVICE_UUID]
-    });
-    bleDevice.addEventListener('gattserverdisconnected',()=>onDisconnected());
-    bleServer=await bleDevice.gatt.connect();
-    const service=await bleServer.getPrimaryService(BLE_SERVICE_UUID);
-    bleChar=await service.getCharacteristic(BLE_CHAR_TX_UUID);
-    await bleChar.startNotifications();
-    bleChar.addEventListener('characteristicvaluechanged',handleBLENotify);
-    onConnected('Connected (Bluetooth)');
-  }catch(e){sTxt.textContent='Failed: '+e.message;}
-}
-async function disconnectBLE(){
-  try{if(bleChar)await bleChar.stopNotifications();}catch(e){}
-  try{if(bleDevice&&bleDevice.gatt.connected)bleDevice.gatt.disconnect();}catch(e){}
-}
-function handleBLENotify(event){
-  const text=new TextDecoder().decode(event.target.value);
-  console.log('[BLE data]',JSON.stringify(text)); // debug: remove once working
-  bleLineBuf+=text;
-  const lines=bleLineBuf.split('\n');
-  bleLineBuf=lines.pop();
-  lines.forEach(l=>parseLine(l.trim()));
 }
 
 function parseLine(line){
